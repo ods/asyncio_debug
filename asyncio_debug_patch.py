@@ -43,7 +43,7 @@ def format_execution_point(coro):
         c = f.f_code
         return f'stopped at {c.co_filename}:{f.f_lineno}:{c.co_name}'
     else:
-        return f"(can't get execution point for {type(coro)})"
+        return f"(can't get execution point for {coro!r})"
 
 
 def format_handle(handle):
