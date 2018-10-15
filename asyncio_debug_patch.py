@@ -35,13 +35,22 @@ def unwrap_task_wakeup_method(wrapper: TaskWakeupMethWrapper):
 def format_execution_point(coro):
     if asyncio.iscoroutine(coro):
         if inspect.iscoroutine(coro):
+            t = 'coroutine'
+            s = inspect.getcoroutinestate(coro)
+            c = coro.cr_code
             f = coro.cr_frame
         else:
+            t = 'generator'
+            s = inspect.getgeneratorstate(coro)
+            c = coro.gi_code
             f = coro.gi_frame
-        if f is None:
-            return f'(frame is None for {coro!r})'
-        c = f.f_code
-        return f'stopped at {c.co_filename}:{f.f_lineno}:{c.co_name}'
+        ref = f'{c.co_filename}:{c.co_firstlineno}:{c.co_name}'
+        if s.endswith('CLOSED'):
+            return f'{type} {ref} just finished'
+        elif s.endswith('SUSPENDED'):
+            return f'{type} {ref} stopped at line {f.f_lineno}'
+        else:
+            assert False, f'Unexpected state {s} for {coro!r})'
     else:
         return f"(can't get execution point for {coro!r})"
 
