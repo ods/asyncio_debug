@@ -48,6 +48,12 @@ def format_execution_point(coro):
 
 def format_handle(handle):
     std_result = std_format_handle(handle)
+
+    if handle._source_traceback is None:
+        tb = '... (source traceback is not avalable)\n'
+    else:
+        tb = ''.join(traceback.format_list(handle._source_traceback))
+
     cb = handle._callback
     if isinstance(getattr(cb, '__self__', None), asyncio.tasks.Task):
         coro = cb.__self__._coro
@@ -56,7 +62,7 @@ def format_handle(handle):
     else:
         coro = cb
     exe_point = format_execution_point(coro)
-    tb = ''.join(traceback.format_list(handle._source_traceback))
+
     return f'{std_result}\n{tb}... {exe_point}\n...'
 
 std_format_handle = asyncio.base_events._format_handle
