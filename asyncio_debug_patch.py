@@ -39,7 +39,7 @@ def format_execution_point(coro):
         else:
             f = coro.gi_frame
         if f is None:
-            return '(frame is None)'
+            return f'(frame is None for {coro!r})'
         c = f.f_code
         return f'stopped at {c.co_filename}:{f.f_lineno}:{c.co_name}'
     else:
