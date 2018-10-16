@@ -46,9 +46,9 @@ def format_execution_point(coro):
             f = coro.gi_frame
         ref = f'{c.co_filename}:{c.co_firstlineno}:{c.co_name}'
         if s.endswith('CLOSED'):
-            return f'{type} {ref} just finished'
+            return f'{t} {ref} just finished'
         elif s.endswith('SUSPENDED'):
-            return f'{type} {ref} stopped at line {f.f_lineno}'
+            return f'{t} {ref} stopped at line {f.f_lineno}'
         else:
             assert False, f'Unexpected state {s} for {coro!r})'
     else:
