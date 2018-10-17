@@ -41,7 +41,7 @@ To enable patch just import it:
 import asyncio_debug_patch
 ```
 
-The patch works for default asyncio event loop implementation.  In case you are using other implementation like `uvloop` switch to devault loop when debugging is enabled:
+The patch works for default asyncio event loop implementation only.  In case you are using other implementation like `uvloop` switch to devault loop when debugging is enabled:
 
 ```
 if asyncio.coroutines._is_debug_mode():
