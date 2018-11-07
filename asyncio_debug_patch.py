@@ -6,13 +6,6 @@ import inspect
 import traceback
 
 
-TaskWakeupMethWrapper = ctypes.cast(
-    # The following doesn't work with dynamic symbols:
-    # ctypes.pythonapi.TaskWakeupMethWrapper_Type,
-    ctypes.pydll._dlltype(_asyncio.__file__).TaskWakeupMethWrapper_Type,
-    ctypes.py_object
-).value
-
 PyObject_HEAD = [
     ('ob_refcnt', ctypes.c_size_t),
     ('ob_type', ctypes.c_void_p),
@@ -24,7 +17,7 @@ class TaskWakeupMethWrapper_Structure(ctypes.Structure):
     ]
 
 
-def unwrap_task_wakeup_method(wrapper: TaskWakeupMethWrapper):
+def unwrap_task_wakeup_method(wrapper: 'TaskWakeupMethWrapper'):
     wrapper_p = ctypes.cast(
         ctypes.c_void_p(id(wrapper)),
         ctypes.POINTER(TaskWakeupMethWrapper_Structure),
@@ -66,7 +59,7 @@ def format_handle(handle):
     cb = handle._callback
     if isinstance(getattr(cb, '__self__', None), asyncio.tasks.Task):
         coro = cb.__self__._coro
-    elif isinstance(cb, TaskWakeupMethWrapper):
+    elif type(cb).__name__ == 'TaskWakeupMethWrapper':
         coro = unwrap_task_wakeup_method(cb)._coro
     else:
         coro = cb
