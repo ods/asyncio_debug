@@ -17,6 +17,14 @@ class TaskWakeupMethWrapper_Structure(ctypes.Structure):
     ]
 
 
+class PyAsyncGenASend_Structure(ctypes.Structure):
+    _fields_ = PyObject_HEAD + [
+        ('ags_gen', ctypes.py_object),
+        ('ags_sendval', ctypes.py_object),
+        ('ags_state', ctypes.c_int),
+    ]
+
+
 def unwrap_task_wakeup_method(wrapper: 'TaskWakeupMethWrapper'):
     wrapper_p = ctypes.cast(
         ctypes.c_void_p(id(wrapper)),
@@ -25,18 +33,43 @@ def unwrap_task_wakeup_method(wrapper: 'TaskWakeupMethWrapper'):
     return wrapper_p.contents.ww_task
 
 
+def unwrap_async_generator_asend(wrapper: 'async_generator_asend'):
+    wrapper_p = ctypes.cast(
+        ctypes.c_void_p(id(wrapper)),
+        ctypes.POINTER(PyAsyncGenASend_Structure),
+    )
+    return wrapper_p.contents.ags_gen
+
+
+def getasyncgenstate(coro):
+    if coro.ag_running:
+        return 'RUNNING'
+    if coro.ag_frame is None:
+        return 'CLOSED'
+    if coro.ag_frame.f_lasti == -1:
+        return 'CREATED'
+    return 'SUSPENDED'
+
+
 def format_execution_point(coro):
-    if asyncio.iscoroutine(coro):
+    if asyncio.iscoroutine(coro) or inspect.isasyncgen(coro):
         if inspect.iscoroutine(coro):
             t = 'coroutine'
             s = inspect.getcoroutinestate(coro)
             c = coro.cr_code
             f = coro.cr_frame
-        else:
+        elif inspect.isgenerator(coro):
             t = 'generator'
             s = inspect.getgeneratorstate(coro)
             c = coro.gi_code
             f = coro.gi_frame
+        elif inspect.isasyncgen(coro):
+            t = 'async_generator'
+            s = getasyncgenstate(coro)
+            f = coro.ag_frame
+            c = coro.ag_code
+        else:
+            return f"(unsupported coroutine type {type(coro)!r})"
         ref = f'{c.co_filename}:{c.co_firstlineno}:{c.co_name}'
         if s.endswith('CLOSED'):
             return f'{t} {ref} just finished'
@@ -63,6 +96,11 @@ def format_handle(handle):
         coro = unwrap_task_wakeup_method(cb)._coro
     else:
         coro = cb
+
+    # One more possible wrapper for async_generator
+    if type(coro).__name__ == 'async_generator_asend':
+        coro = unwrap_async_generator_asend(coro)
+
     exe_point = format_execution_point(coro)
 
     return f'{std_result}\n{tb}... {exe_point}\n...'

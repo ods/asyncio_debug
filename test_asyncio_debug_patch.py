@@ -51,26 +51,36 @@ def parse_debug_message(record):
 async def in_executor(loop):
     await loop.run_in_executor(None, time.sleep, SLOW_DURATION)
 
-async def asyncdef_finished():
+async def asyncdef_finstate():
     time.sleep(SLOW_DURATION)
 
-async def asyncdef_suspended():
+async def asyncdef_suspstate():
     time.sleep(SLOW_DURATION)
     # Switch point is just before await
     lineno = getframeinfo(currentframe()).lineno; await asyncio.sleep(0)
     return lineno
 
 @asyncio.coroutine
-def generator_finished():
+def generator_finstate():
     yield
     time.sleep(SLOW_DURATION)
 
 @asyncio.coroutine
-def generator_suspended():
+def generator_suspstate():
     time.sleep(SLOW_DURATION)
     # Switch point is just before yield
     lineno = getframeinfo(currentframe()).lineno; yield
     return lineno
+
+# XXX It's probably not possible to get "finished", since it raises
+# StopAsyncIteration is this case
+def asend_suspstate():
+    async def asend_suspstate():
+        time.sleep(SLOW_DURATION)
+        # Switch point is just before yield
+        lineno = getframeinfo(currentframe()).lineno; yield lineno
+        yield
+    return asend_suspstate().asend(None)
 
 
 # --- Tests ---
@@ -83,7 +93,7 @@ def test_no_source_traceback(loop, caplog):
 
 
 @pytest.mark.parametrize(
-    'coro_func', [asyncdef_finished, generator_finished],
+    'coro_func', [asyncdef_finstate, generator_finstate, asend_suspstate],
 )
 def test_source_traceback(loop, caplog, coro_func):
     """Chack that source traceback contains line it was started from"""
@@ -97,7 +107,7 @@ def test_source_traceback(loop, caplog, coro_func):
 
 
 @pytest.mark.parametrize(
-    'coro_func', [asyncdef_finished, generator_finished],
+    'coro_func', [asyncdef_finstate, generator_finstate],
 )
 def test_finished_state(loop, caplog, coro_func):
     loop.run_until_complete(coro_func())
@@ -108,7 +118,7 @@ def test_finished_state(loop, caplog, coro_func):
 
 
 @pytest.mark.parametrize(
-    'coro_func', [asyncdef_suspended, generator_suspended],
+    'coro_func', [asyncdef_suspstate, generator_suspstate, asend_suspstate],
 )
 def test_suspended_state(loop, caplog, coro_func):
     lineno = loop.run_until_complete(coro_func())
